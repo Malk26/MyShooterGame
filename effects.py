@@ -41,7 +41,7 @@ class Particle:
         self.vel *= 0.95  # friction / slow down
         self.age += 1
 
-        # التحكم في الحالة عن طريق شرط بسيط
+        
         if self.age >= self.lifetime:
             self.alive = False
 
@@ -68,11 +68,10 @@ class ParticleSystem:
 
     def update(self):
         """Update and filter particles using list methods (for loop & remove)."""
-        # تحديث الحركة لكل عنصر في القائمة
+        
         for p in self.particles:
             p.update()
 
-        # إزالة العناصر المنتهية باستخدام قائمة جديدة (تجميع بسيط كما بالمحاضرة)
         active_particles = []
         for p in self.particles:
             if p.alive:
@@ -85,10 +84,7 @@ class ParticleSystem:
 
 
 class ScreenShake:
-    """Screen shake effect.
 
-    يبدأ بقوة ثم تقل قوة الاهتزاز تدريجياً حتى تعود الشاشة إلى مكانها الطبيعي.
-    """
 
     def __init__(self):
         self.duration = 0
@@ -105,7 +101,7 @@ class ScreenShake:
             self.timer -= 1
 
     def get_offset(self):
-        """Method عادية لحساب الإزاحة (بدلاً من @property)."""
+        
         if self.timer <= 0:
             return (0, 0)
 
@@ -161,7 +157,7 @@ class TestEffects(unittest.TestCase):
             particle.update()
 
         self.assertFalse(
-            particle.alive, "Particle should be dead after its lifetime expires"
+            particle.alive, 
         )
 
     def test_particle_system_explode_and_update(self):
@@ -169,12 +165,12 @@ class TestEffects(unittest.TestCase):
         ps.explode(50, 50, (0, 255, 0), count=10)
 
         self.assertEqual(
-            len(ps.particles), 10, "Should spawn exactly 10 particles"
+            len(ps.particles), 10, 
         )
 
         for p in ps.particles:
             p.age = p.lifetime
-            p.alive = False  # تم تعديلها لتوافق التغيير الجديد
+            p.alive = False      
 
         ps.update()
         self.assertEqual(
