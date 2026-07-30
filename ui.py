@@ -23,7 +23,8 @@ class UI:
         pygame.mixer.music.load("assets/sounds/bg.mp3")
 
     def draw_background(self, screen):
-        screen.blit(self.background, (0, 0))
+        background = pygame.transform.scale(self.background, screen.get_size())
+        screen.blit(background, (0, 0))
 
     def draw_score(self, screen, score):
         score_text = self.font.render(f"Score: {score}", True, (255, 255, 255))
@@ -63,29 +64,46 @@ class UI:
     def play_hit(self):
         self.hit_sound.play()
 
-    def show_game_over(self, screen):
-        text = self.big_font.render("GAME OVER", True, (255, 0, 0))
-        text_rect = text.get_rect(center=(500, 350))
-        screen.blit(text, text_rect)
+    def show_game_over(self, screen, score=0):
+        width, height = screen.get_size()
+
+        title = self.big_font.render("TIME'S UP!", True, (255, 215, 0))
+        score_text = self.font.render(f"Final Score : {score}", True, (255, 255, 255))
+        again = self.font.render("Press ENTER To Play Again", True, (200, 255, 200))
+        menu = self.font.render("Press ESC To Exit Game", True, (200, 200, 255))
+
+        screen.blit(title, title.get_rect(center=(width//2, height//2 - 70)))
+        screen.blit(score_text, score_text.get_rect(center=(width//2, height//2 - 10)))
+        screen.blit(again, again.get_rect(center=(width//2, height//2 + 45)))
+        screen.blit(menu, menu.get_rect(center=(width//2, height//2 + 85)))
 
     def draw_crosshair(self, screen):
         x, y = pygame.mouse.get_pos()
         rect = self.crosshair.get_rect(center=(x, y))
         screen.blit(self.crosshair, rect)
 
-    def show_pause(self, screen):
-        text = self.big_font.render("PAUSED", True, (255, 255, 0))
-        hint = self.font.render("Press ESC To Continue", True, (255, 255, 255))
+    def show_pause(self, screen, music_on=True):
+        width, height = screen.get_size()
 
-        screen.blit(text, text.get_rect(center=(500, 300)))
-        screen.blit(hint, hint.get_rect(center=(500, 360)))
+        title = self.big_font.render("PAUSED", True, (255, 255, 0))
+        resume = self.font.render("Press ESC To Continue", True, (255, 255, 255))
+
+        status = "ON" if music_on else "OFF"
+        music = self.font.render(f"Press M : Music {status}", True, (255, 255, 255))
+
+        screen.blit(title, title.get_rect(center=(width // 2, height // 2 - 60)))
+        screen.blit(resume, resume.get_rect(center=(width // 2, height // 2)))
+        screen.blit(music, music.get_rect(center=(width // 2, height // 2 + 40)))
 
     def show_start_screen(self, screen):
+        width, height = screen.get_size()
+        print(width, height)
+
         title = self.big_font.render("TARGET SHOOTER", True, (255, 255, 255))
         hint = self.font.render("Press ENTER To Start", True, (255, 255, 0))
 
-        screen.blit(title, title.get_rect(center=(500, 250)))
-        screen.blit(hint, hint.get_rect(center=(500, 320)))
+        screen.blit(title, title.get_rect(center=(width // 2, height // 2 - 50)))
+        screen.blit(hint, hint.get_rect(center=(width // 2, height // 2 + 20)))
 
     def set_icon(self):
         pygame.display.set_icon(self.icon)

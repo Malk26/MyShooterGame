@@ -14,11 +14,18 @@ import pygame
 
 
 def check_collision(point, target):
-    """Precise collision check between a point (crosshair position) and a target.
+    """Precise collision check between a point (crosshair/mouse position) and a target.
 
-    Returns True only if the point is within the target's circular radius.
+    Supports both Vector2 and (x, y) tuples for point.
     """
-    return target.alive and point.distance_to(target.pos) <= target.radius
+    if not hasattr(target, 'alive') or not target.alive:
+        return False
+        
+    point_vec = pygame.math.Vector2(point)
+    target_pos = pygame.math.Vector2(target.pos) if hasattr(target, 'pos') else pygame.math.Vector2(target.rect.center)
+    radius = getattr(target, 'radius', target.rect.width / 2 if hasattr(target, 'rect') else 20)
+
+    return point_vec.distance_to(target_pos) <= radius
 
 
 class Particle:
@@ -35,24 +42,27 @@ class Particle:
         self.age = 0
         self.alive = True
 
+        # إنشاء سطح الجسيم مرة واحدة للأداء المباشر
+        self.surface = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(
+            self.surface, (*self.color, 255), (self.radius, self.radius), self.radius
+        )
+
     def update(self):
-        """Update particle position and age (Standard method style)."""
+        """Update particle position and age."""
         self.pos += self.vel
         self.vel *= 0.95  # friction / slow down
         self.age += 1
 
-        
         if self.age >= self.lifetime:
             self.alive = False
 
     def draw(self, surface):
+        if not self.alive:
+            return
         fade = max(0, 255 - int(255 * (self.age / self.lifetime)))
-        color = (self.color[0], self.color[1], self.color[2])
-        s = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        pygame.draw.circle(
-            s, (*color, fade), (self.radius, self.radius), self.radius
-        )
-        surface.blit(s, (self.pos.x - self.radius, self.pos.y - self.radius))
+        self.surface.set_alpha(fade)
+        surface.blit(self.surface, (self.pos.x - self.radius, self.pos.y - self.radius))
 
 
 class ParticleSystem:
@@ -67,16 +77,12 @@ class ParticleSystem:
             self.particles.append(Particle(x, y, color))
 
     def update(self):
-        """Update and filter particles using list methods (for loop & remove)."""
-        
+        """Update and filter particles quickly using List Comprehension."""
         for p in self.particles:
             p.update()
-
-        active_particles = []
-        for p in self.particles:
-            if p.alive:
-                active_particles.append(p)
-        self.particles = active_particles
+        
+        # تصفية الجسيمات الميتة بسطر واحد سريعة للأداء
+        self.particles = [p for p in self.particles if p.alive]
 
     def draw(self, surface):
         for p in self.particles:
@@ -84,7 +90,7 @@ class ParticleSystem:
 
 
 class ScreenShake:
-
+    """Camera shake effect generator."""
 
     def __init__(self):
         self.duration = 0
@@ -101,8 +107,7 @@ class ScreenShake:
             self.timer -= 1
 
     def get_offset(self):
-        
-        if self.timer <= 0:
+        if self.timer <= 0 or self.duration == 0:
             return (0, 0)
 
         strength = self.magnitude * (self.timer / self.duration)
@@ -117,10 +122,8 @@ class ScreenShake:
 # UNIT TESTS
 # =============================================================
 
-
 class DummyTarget:
-
-    def __init__(self, pos, radius, alive=True):
+    def init(self, pos, radius, alive=True):
         self.pos = pygame.math.Vector2(pos)
         self.radius = radius
         self.alive = alive
@@ -131,21 +134,20 @@ class TestEffects(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         pygame.init()
-
-    # 1. Test check_collision Function
+# 1. Test check_collision Function
     def test_check_collision_hit(self):
         target = DummyTarget((100, 100), radius=20, alive=True)
-        point = pygame.math.Vector2(105, 100)
+        point = (105, 100)  # اختبار إرسال tuple بدلاً من Vector2
         self.assertTrue(check_collision(point, target))
 
     def test_check_collision_miss(self):
         target = DummyTarget((100, 100), radius=20, alive=True)
-        point = pygame.math.Vector2(130, 100)
+        point = (130, 100)
         self.assertFalse(check_collision(point, target))
 
     def test_check_collision_dead_target(self):
         target = DummyTarget((100, 100), radius=20, alive=False)
-        point = pygame.math.Vector2(100, 100)
+        point = (100, 100)
         self.assertFalse(check_collision(point, target))
 
     # 2. Test Particle System
@@ -156,17 +158,13 @@ class TestEffects(unittest.TestCase):
         for _ in range(initial_lifetime):
             particle.update()
 
-        self.assertFalse(
-            particle.alive, 
-        )
+        self.assertFalse(particle.alive)
 
     def test_particle_system_explode_and_update(self):
         ps = ParticleSystem()
         ps.explode(50, 50, (0, 255, 0), count=10)
 
-        self.assertEqual(
-            len(ps.particles), 10, 
-        )
+        self.assertEqual(len(ps.particles), 10)
 
         for p in ps.particles:
             p.age = p.lifetime
@@ -182,12 +180,10 @@ class TestEffects(unittest.TestCase):
     # 3. Test ScreenShake
     def test_screen_shake(self):
         shake = ScreenShake()
-        self.assertEqual(
-            shake.get_offset(), (0, 0), "Offset should be (0, 0) initially"
-        )
+        self.assertEqual(shake.get_offset(), (0, 0))
 
         shake.start(duration=5, magnitude=10)
-        self.assertNotEqual(shake.duration, 0, "Shake duration should be set")
+        self.assertNotEqual(shake.duration, 0)
 
         offset_x, offset_y = shake.get_offset()
         self.assertTrue(-10 <= offset_x <= 10)
@@ -196,13 +192,8 @@ class TestEffects(unittest.TestCase):
         for _ in range(5):
             shake.update()
 
-        self.assertEqual(
-            shake.get_offset(),
-            (0, 0),
-            "Offset should return to (0, 0) after duration ends",
-        )
+        self.assertEqual(shake.get_offset(), (0, 0))
 
 
-# Run tests
-if __name__ == "__main__":
+if __name__ == "main":
     unittest.main(argv=["first-arg-is-ignored"], exit=False, verbosity=2)
